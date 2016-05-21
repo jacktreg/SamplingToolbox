@@ -1,0 +1,146 @@
+<html>
+<head>
+<!-- Load the d3 library. -->
+<script src="http://d3js.org/d3.v3.min.js" charset="utf-8"></script> <link
+href='http://fonts.googleapis.com/css?family=Open+Sans' rel='stylesheet'
+type='text/css'> <style> body { font-family: "Open Sans"; } svg { border: solid
+black 1px; } .bar rect { fill: #ccc; } .axis path { fill: none; stroke: black;}
+.axis line { stroke: black; } .axis text { font-size: x-small; } path.residual {
+stroke: black; opacity: 0.2; stroke-width: 5; } </style> </head> <body>
+
+
+<div id="plot"></div>
+
+<script>
+
+var height = 600;
+var width = 1000;
+var padding = 25;
+
+var MAX_VALUE = 10;
+var NUM_POINTS = 2000;
+var successes = 0;
+var pointsNaive = [];
+var pointsImproved = [];
+var maxX,  maxY;
+var xSign = 1;
+var ySign = 1;
+
+function findXandYSign() {
+  var randX = Math.random();
+  var randY = Math.random();
+  if (randX > 0.5) {
+    xSign = -1;
+  }
+  else {
+    xSign = 1;
+  }
+}
+
+// Returns a random integer between min (included) and max (excluded)
+function getRandomInt(min, max) {
+  return Math.floor(Math.random() * (max - min)) + min;
+}
+
+function returnPoint() {
+  findXandYSign();
+  var xVal = Math.random() * MAX_VALUE * xSign;
+  var yVal = Math.random() * MAX_VALUE * ySign;
+  return {x: xVal, y: yVal};
+}
+
+function generateSample(n) {
+  var sample = [];
+  for (var i = 0; i < n; i++) {
+    findXandYSign();
+    var xVal = Math.random() * MAX_VALUE * xSign;
+    var yVal = Math.random() * MAX_VALUE * ySign;
+    sample.push(returnPoint());
+  }
+  return sample;
+}
+
+function findBestPoint(sample, currentSample) {
+  var biggestMin = 0;
+  var sampleIndex;
+  if (successes == 0) {
+    return sample[getRandomInt(0,sample.length)];
+  }
+  for (var x = 0; x < sample.length; x++) {
+    var sum = 0;
+    var min = MAX_VALUE * MAX_VALUE;
+    for (var i = 0; i < successes; i++) {
+      var dx = sample[x].x - currentSample[i].x;
+      var dy = sample[x].y - currentSample[i].y;
+      var dist = Math.sqrt(dx * dx + dy * dy);
+      min = (min < dist) ? min : dist;
+    }
+    if (min >= biggestMin) {
+      biggestMin = min;
+      sampleIndex = x;
+    }
+  }
+  return sample[sampleIndex];
+}
+
+function improvedSample() {
+  var oldBiggestDiff = 0;
+  var tries = 0;
+  var points = [];
+  while (successes < NUM_POINTS) {
+    var newSample = generateSample(25);
+    var bestPoint = findBestPoint(newSample, points);
+    points.push(bestPoint);
+    successes += 1;
+  }
+  return points;
+}
+
+function printPoints() {
+  for (var i = 0; i < successes; i++) {
+    console.log("x: " + points[i].x + "y: " + points[i].y);
+  }
+}
+
+function randomColor() {
+  var rgb = "(";
+  for(var i = 0; i < 3; i++)
+    rgb = push(Math.floor(Math.random() * 255));
+}
+
+var desiredSample;
+desiredSample = improvedSample();
+
+// this is how you generate a naive sample
+// desiredSample = generateSample(NUM_POINTS);
+
+var svg = d3.select("#plot").append("svg")
+.attr("height", (height + padding * 2))
+.attr("width", (width + padding * 2));
+
+var xScale = d3.scale.linear().domain([-MAX_VALUE, MAX_VALUE]).range([padding, width - [padding]]);
+var yScale = d3.scale.linear().domain([0, MAX_VALUE]).range([height, padding]);
+
+var xAxis = d3.svg.axis().scale(xScale);
+svg.append("g")
+  .attr("class", "axis")
+  .attr("transform", "translate(0, " + (height) + ")")
+  .call(xAxis);
+
+var yAxis = d3.svg.axis().scale(yScale).orient("left");
+svg.append("g")
+	.attr("class", "axis")
+	.attr("transform", "translate(" + (width / 2) + ", 0)")
+	.call(yAxis);
+
+var circles = svg.selectAll("circle").data(desiredSample).enter()
+.append("circle")
+.attr("cx", function (d) { return xScale(d.x); })
+.attr("cy", function (d) { return yScale(d.y); })
+.attr("r", 2)
+.attr("fill", "blue")
+.style("opacity", "" +  0.75 + "")
+
+</script>
+</body>
+</html>
